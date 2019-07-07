@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Keyboard Race</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/styles/index.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>  
+  <script defer>
+    const jwt = localStorage.getItem("token");
+    if (!jwt) {
+      location.replace('/signup');
+    }
+  </script>
+</head>
+<body>
+  <main class="container">
+    <h1 class="timer"></h1>
+    <p class="text" hidden="true"></p>
+    <ul class="players" hidden="true"></ul>
+    <textarea name="text" id="text" cols="30" rows="10" hidden="true"></textarea>
+    <button id="restart" hidden>RESTART</button>
+  </main>
+  <script>
+    window.onload = () => {
+      const timerBlock = document.querySelector(".timer");
+      const textBlock = document.querySelector(".text");
+      const textArea = document.getElementById("text");
+      const playersList = document.querySelector(".players")
+      const restartButton = document.getElementById("restart");
+      
+      let raceText;
+      let userLogin;
+
+      function sortPlayers() {
+
+      }
+
+      function getText(raceNumber) {
+        fetch(`/text/${raceNumber}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+          }
+        }).then(res => res.json())
+          .then(res => {
+            if( res.success) {
+              raceText = res.data.text;
+            }
+          })
+          .catch(err => alert);
+      }
+
+      function wait() {
+        restartButton.hidden = true;
+        while (playersList.firstChild) {
+          playersList.removeChild(playersList.firstChild);
+        }
+        const waitSocket = io('http://localhost:3000/wait', {
+          transportOptions: {
+            polling: {
+              extraHeaders: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+            }
+          }
+        });
+
+        waitSocket.on("error", ({ error }) => alert(error.message));
+
+        waitSocket.on("join-to-game", ({ raceNumber, login }) => {
+          getText(raceNumber);
+          userLogin = login;
+        });
+
+        waitSocket.on("timer", data => {        
+          timerBlock.innerText = `Start in ${data.secondsToStart} seconds`;
+        });
+
+        waitSocket.on("start", ({ players }) => {
+          textBlock.hidden = false;
+          textArea.hidden = false;
+          playersList.hidden = false;
+
+          players.forEach(player => {
+            const li = document.createElement("li");
+            li.id = player.login;
+            const h3 = document.createElement("h3");
+            h3.innerHTML = player.login;
+            const progress = document.createElement("progress");
+            progress.value = 0;
+            progress.max = raceText.length;
+
+            li.appendChild(h3);
+            li.appendChild(progress);
+            playersList.appendChild(li);
+          });
+
+          timerBlock.innerText = "Start!";
+          textBlock.innerText = raceText;
+          waitSocket.disconnect();
+          start();
+        });
+      }
+
+      wait();
+
+      function start() {
+        const raceSocket = io('http://localhost:3000/race', {
+          transportOptions: {
+            polling: {
+              extraHeaders: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+            }
+          }
+        });
+
+        raceSocket.on("get-enemy-progress", ({userLogin, correctSymbols}) => {          
+          const progress = document.querySelector(`#${userLogin} progress`);
+          
+          if( correctSymbols && progress ) {
+            progress.value = correctSymbols;
+          };
+        });
+
+        raceSocket.on("error", ({ error }) => alert(error.message));
+
+        raceSocket.on("stop", ({ playersInGame }) => { 
+          timerBlock.innerText = "Finish!";         
+          textBlock.hidden = true;
+          textArea.hidden = true;
+          textArea.value = "";
+          playersList.hidden = false;
+
+          restartButton.hidden = false;
+
+          while(playersList.firstChild) {
+            playersList.removeChild(playersList.firstChild);
+          }
+
+          console.log(playersInGame);
+
+          playersInGame.forEach(player => {
+            const li = document.createElement("li");
+            li.id = player.login;
+            const h3 = document.createElement("h3");
+            h3.innerHTML = player.login;
+            const progress = document.createElement("progress");
+            progress.value = player.progress;
+            progress.max = raceText.length;
+
+            li.appendChild(h3);
+            li.appendChild(progress);
+            playersList.appendChild(li);
+          });
+          
+          restartButton.addEventListener("click", e => {
+            wait();
+          });
+        });
+
+        textArea.addEventListener("input", e => {
+          let correctSymbols = 0;        
+          const inputText = e.target.value;
+          const length = inputText.length;
+          let inner = "";
+
+          inputText.split("").forEach((symbol, index) => {
+            if ( symbol === raceText[index] ) {
+              inner += `<span class="good-symbol">` + symbol + `</span>`;
+              correctSymbols ++;
+              const progress = document.querySelector(`#${userLogin} progress`);
+              progress.value = correctSymbols;              
+            } else {
+              inner += `<span class="wrong-symbol">` + raceText[index] + `</span>`;
+            }
+          });
+
+          raceSocket.emit("get-progress", { userLogin, correctSymbols });
+
+          if( correctSymbols === raceText.length ) {
+            raceSocket.emit("finish");
+          }
+
+          if( length !== raceText.legth ) {
+            inner += `<span class="next-symbol">` + raceText[length] + `</span>`;
+            inner += raceText.slice(length + 1, -1);
+            textBlock.innerHTML = inner;  
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html> 

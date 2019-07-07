@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>SignUp Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="styles/login.css">
+</head>
+<body>
+  <div class="container">
+    <form class="login-form">
+      <input type="text" id="login" name="login" placeholder="Login">
+      <input type="password" id="password" name="password" placeholder="Password">
+      <a href="/login">Login</a>
+      <button id="sign-up">Sign Up</button>
+    </form>
+  </div>
+
+  <script>
+    const jwt = localStorage.getItem("token");
+    if (jwt) {
+      location.replace('/');
+    }
+    const loginArea = document.getElementById("login");
+    const passArea = document.getElementById("password");
+
+    const signUpBtn = document.getElementById("sign-up");
+
+    signUpBtn.addEventListener("click", event => {
+      event.preventDefault ? event.preventDefault() : event.returnValue = false;
+      fetch("/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({
+          login: loginArea.value,
+          password: passArea.value
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }).then(res => res.json())
+        .then(res => {
+          if(!res.success) {
+            alert(res.data.error);            
+          } else {
+            localStorage.setItem("token", res.data.token);
+            location.replace('/');
+          }
+        })
+        .catch(err => {
+        console.error(err);
+      });
+    });
+  </script>
+</body>
+</html>
