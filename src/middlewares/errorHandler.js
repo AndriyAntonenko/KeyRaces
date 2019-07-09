@@ -9,7 +9,9 @@ module.exports = app => {
   // error handler
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
-    res.status(err.status || 500).json({
+    const statusCode = err.name === "ValidationError" ? 400 : err.status;
+
+    res.status(statusCode || 500).json({
       success: false,
       data: { error: err.message }
     });

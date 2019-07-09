@@ -1,5 +1,5 @@
 module.exports = {
-  PORT: process.env.PORT || 3000,
+  PORT: process.env.PORT || 3001,
   mongoose: {
     url: "mongodb://andrii:qwe123@ds347467.mlab.com:47467/binary-races",
     options: {

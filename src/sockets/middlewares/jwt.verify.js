@@ -27,7 +27,8 @@ function jwtVerify(socket, next) {
       _id: user._id,
       login: user.login,
       progress: 0,
-      time: 0
+      time: 0,
+      startTime: null
     };
 
     return next();
