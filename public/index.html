@@ -60,12 +60,6 @@
       }
 
       function wait() {
-        restartButton.hidden = true;
-        commentatorBlock.hidden = true;
-
-        while (playersList.firstChild) {
-          playersList.removeChild(playersList.firstChild);
-        }
         const waitSocket = io('http://localhost:3000/wait', {
           transportOptions: {
             polling: {
@@ -75,6 +69,13 @@
             }
           }
         });
+        
+        restartButton.hidden = true;
+        commentatorBlock.hidden = true;
+
+        while (playersList.firstChild) {
+          playersList.removeChild(playersList.firstChild);
+        }
 
         waitSocket.emit("wait-game");
 
@@ -149,7 +150,6 @@
         }, commentPeriod * 1000);
 
         commentatorSocket.on("message", ({ message }) => {
-          console.log(message);
           commentatorBlock.innerText = message;
         });
 
@@ -198,26 +198,26 @@
 
         raceSocket.on("stop", ({ playersInGame }) => { 
           timerBlock.innerText = "Finish!";         
-          textBlock.hidden = true;
-          
-          textArea.hidden = true;
           textArea.value = "";
-          playersList.hidden = false;
 
+          textBlock.hidden = true;
+          textArea.hidden = true;
+
+          playersList.hidden = false;
           restartButton.hidden = false;
+
 
           while(playersList.firstChild) {
             playersList.removeChild(playersList.firstChild);
           }
 
-          console.log(playersInGame);
-
           playersInGame.forEach(player => {
             const li = document.createElement("li");
             li.id = player.login;
+
             const h3 = document.createElement("h3");
-            
             h3.innerHTML = player.login;
+
             const progress = document.createElement("progress");
             progress.value = player.progress;
             progress.max = raceText.length;
@@ -225,25 +225,29 @@
 
             li.appendChild(h3);
             li.appendChild(progress);
+
             playersList.appendChild(li);
           });
           
           restartButton.addEventListener("click", e => {
             wait();
           });
+
           raceSocket.disconnect();
         });
 
         textArea.addEventListener("input", e => {
-          let correctSymbols = 0;        
           const inputText = e.target.value;
           const length = inputText.length;
+
+          let correctSymbols = 0;        
           let inner = "";
 
           inputText.split("").forEach((symbol, index) => {
             if ( symbol === raceText[index] ) {
               inner += `<span class="good-symbol">` + symbol + `</span>`;
               correctSymbols ++;
+              
               const progress = document.querySelector(`#${userLogin} progress`);
               progress.value = correctSymbols;              
             } else {
@@ -253,16 +257,12 @@
 
           raceSocket.emit("get-progress", { userLogin, correctSymbols, raceId }, emitCallback);
           raceProgress = correctSymbols;
-          console.log(raceProgress);
-          console.log(raceText.length);
           
           if( correctSymbols === raceText.length ) {
             raceSocket.emit("finish");
           }
           
-          if( raceText.length > length ) {
-            console.log("duihqiudwq");
-            
+          if( raceText.length > length ) {            
             inner += `<span class="next-symbol">` + raceText[length] + `</span>`;
             inner += raceText.length !== length ? raceText.slice(length + 1) : "";
             textBlock.innerHTML = inner;

@@ -16,8 +16,6 @@ exports.wait = function(io, socket) {
     roomName = `wait-${socket.user.id}`;
 
     const timer = setInterval(() => {
-      console.log(secondsToStart);
-
       const now = new Date();
       secondsToStart--;
 

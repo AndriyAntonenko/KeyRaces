@@ -10,11 +10,7 @@ const timers = {};
 
 exports.startNewRace = async function(io, socket, { raceId }) {
   const newRace = await Race.findById(raceId).populate("user");
-  console.log(newRace);
-
   socket.user.startTime = newRace.createdAt;
-  console.log(socket.user.startTime);
-  console.log(this.nmsp);
 
   if (!newRace) throw new Error("Race not found");
 
@@ -25,8 +21,6 @@ exports.startNewRace = async function(io, socket, { raceId }) {
 
   if (!timers[raceId]) {
     const timer = setTimeout(async () => {
-      console.log(playersInGame[raceId].map(p => `${p._id}`));
-
       await Race.findByIdAndUpdate(raceId, {
         isActive: false,
         racers: playersInGame[raceId].map(p => `${p._id}`)
