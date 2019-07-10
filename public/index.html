@@ -221,10 +221,13 @@
             const progress = document.createElement("progress");
             progress.value = player.progress;
             progress.max = raceText.length;
-            progress.innerText = player.time;
+
+            const timeSpan = document.createElement("span");
+            timeSpan.innerText = `${(player.time / 1000).toFixed(2)} seconds`;
 
             li.appendChild(h3);
             li.appendChild(progress);
+            li.appendChild(timeSpan);
 
             playersList.appendChild(li);
           });
