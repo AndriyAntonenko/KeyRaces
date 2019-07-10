@@ -194,6 +194,17 @@
           playersRating = players;
         });
 
+        raceSocket.on("crash", ({ login }) => {
+          console.log("crash");
+          
+          const progressBlock = document.getElementById(login);
+
+          const infoSpan = document.createElement("span");
+          infoSpan.innerText = "Выбыл...";
+
+          progressBlock.appendChild(infoSpan);
+        });
+
         raceSocket.on("error", ({ error }) => alert(error.message));
 
         raceSocket.on("stop", ({ playersInGame }) => { 

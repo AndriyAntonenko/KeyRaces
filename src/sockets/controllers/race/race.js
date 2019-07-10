@@ -79,6 +79,10 @@ exports.disconnect = async function(io, socket) {
   Object.keys(playersInGame).forEach(key => {
     for (let i = 0; i < playersInGame[key].length; i++) {
       if (playersInGame[key][i].login === socket.user.login) {
+        socket.broadcast
+          .to(`race-${key}`)
+          .emit("crash", { login: socket.user.login });
+
         playersInGame[key].splice(i, 1);
         break;
       }
