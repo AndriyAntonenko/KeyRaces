@@ -16,6 +16,7 @@
 </head>
 <body>
   <main class="container">
+    <div class="commentator"></div>
     <h1 class="timer"></h1>
     <p class="text" hidden="true"></p>
     <ul class="players" hidden="true"></ul>
@@ -27,9 +28,12 @@
       const timerBlock = document.querySelector(".timer");
       const textBlock = document.querySelector(".text");
       const textArea = document.getElementById("text");
+
       const playersList = document.querySelector(".players")
       const restartButton = document.getElementById("restart");
+      const commentatorBlock = document.querySelector(".commentator");
 
+      const commentPeriod = 15;
       const emitCallback = (err) => {
         if(err) {
           alert(err.message)
@@ -38,6 +42,7 @@
       
       let raceText;
       let userLogin;
+      let raceProgress;
 
       function getText(raceNumber) {
         fetch(`/text/${raceNumber}`, {
@@ -56,10 +61,12 @@
 
       function wait() {
         restartButton.hidden = true;
+        commentatorBlock.hidden = true;
+
         while (playersList.firstChild) {
           playersList.removeChild(playersList.firstChild);
         }
-        const waitSocket = io('http://localhost:3001/wait', {
+        const waitSocket = io('http://localhost:3000/wait', {
           transportOptions: {
             polling: {
               extraHeaders: {
@@ -83,13 +90,17 @@
         waitSocket.on("start", ({ players, raceId }) => {
           textBlock.hidden = false;
           textArea.hidden = false;
+          
           playersList.hidden = false;
+          commentatorBlock.hidden = false;
 
           players.forEach(player => {
             const li = document.createElement("li");
             li.id = player.login;
+
             const h3 = document.createElement("h3");
             h3.innerHTML = player.login;
+            
             const progress = document.createElement("progress");
             progress.value = 0;
             progress.max = raceText.length;
@@ -102,14 +113,15 @@
           timerBlock.innerText = "Start!";
           textBlock.innerText = raceText;
           waitSocket.disconnect();
-          start(raceId);
+
+          start(raceId, players);
         });
       }
 
       wait();
 
-      function start(raceId) {
-        const raceSocket = io('http://localhost:3001/race', {
+      function commentator(raceId) {
+        const commentatorSocket = io('http://localhost:3000/commentator', {
           transportOptions: {
             polling: {
               extraHeaders: {
@@ -119,14 +131,67 @@
           }
         });
 
+        let time = 0;
+        commentatorSocket.emit("get-comment", { 
+          raceId, 
+          time, 
+          toFinish: raceText.length - raceProgress
+        }, emitCallback);
+
+        const timer = setInterval(() => {
+          time += commentPeriod;   
+
+          commentatorSocket.emit("get-comment", { 
+            raceId, 
+            time, 
+            toFinish: raceText.length - raceProgress
+          }, emitCallback);
+        }, commentPeriod * 1000);
+
+        commentatorSocket.on("message", ({ message }) => {
+          console.log(message);
+          commentatorBlock.innerText = message;
+        });
+
+        commentatorSocket.on("finish", () => {    
+          clearInterval(timer);
+          commentatorSocket.disconnect();
+        });
+
+        textArea.addEventListener("input", (e) => {          
+          if( raceText.length - raceProgress === 30 || e.target.value === raceText ) {
+            commentatorSocket.emit("get-comment", { 
+              raceId, 
+              time, 
+              toFinish: e.target.value === raceText ? 0 : 30
+            }, emitCallback);
+          }
+        })
+      }
+
+      function start(raceId, players) {
+        const raceSocket = io('http://localhost:3000/race', {
+          transportOptions: {
+            polling: {
+              extraHeaders: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+            }
+          }
+        });
+
+        commentator(raceId);
+
         raceSocket.emit("join-to-race", { raceId }, emitCallback);
 
-        raceSocket.on("get-enemy-progress", ({userLogin, correctSymbols}) => {          
+        raceSocket.on("get-enemy-progress", ({userLogin, correctSymbols, players}) => {          
           const progress = document.querySelector(`#${userLogin} progress`);
           
           if( correctSymbols && progress ) {
             progress.value = correctSymbols;
           };
+
+          playersRating = players;
         });
 
         raceSocket.on("error", ({ error }) => alert(error.message));
@@ -134,6 +199,7 @@
         raceSocket.on("stop", ({ playersInGame }) => { 
           timerBlock.innerText = "Finish!";         
           textBlock.hidden = true;
+          
           textArea.hidden = true;
           textArea.value = "";
           playersList.hidden = false;
@@ -150,10 +216,12 @@
             const li = document.createElement("li");
             li.id = player.login;
             const h3 = document.createElement("h3");
+            
             h3.innerHTML = player.login;
             const progress = document.createElement("progress");
             progress.value = player.progress;
             progress.max = raceText.length;
+            progress.innerText = player.time;
 
             li.appendChild(h3);
             li.appendChild(progress);
@@ -184,15 +252,20 @@
           });
 
           raceSocket.emit("get-progress", { userLogin, correctSymbols, raceId }, emitCallback);
-
+          raceProgress = correctSymbols;
+          console.log(raceProgress);
+          console.log(raceText.length);
+          
           if( correctSymbols === raceText.length ) {
             raceSocket.emit("finish");
           }
-
-          if( length !== raceText.legth ) {
+          
+          if( raceText.length > length ) {
+            console.log("duihqiudwq");
+            
             inner += `<span class="next-symbol">` + raceText[length] + `</span>`;
-            inner += raceText.slice(length + 1, -1);
-            textBlock.innerHTML = inner;  
+            inner += raceText.length !== length ? raceText.slice(length + 1) : "";
+            textBlock.innerHTML = inner;
           }
         });
       }

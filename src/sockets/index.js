@@ -7,6 +7,7 @@ const errorHandler = require("./middlewares/errorHandler");
 
 const waitInstructions = require("./controllers/wait/instruction");
 const raceInstruction = require("./controllers/race/instruction");
+const commentatorInstruction = require("./controllers/commentator/instuction");
 
 module.exports = server => {
   const io = socketIO(server, {
@@ -47,6 +48,17 @@ module.exports = server => {
         socket.on(
           instruction.eventName,
           errorHandler(socket, io, "/race", instruction)
+        );
+      });
+    });
+
+  io.of("/commentator")
+    .use(jwtVerify)
+    .on("connection", socket => {
+      commentatorInstruction.forEach(instruction => {
+        socket.on(
+          instruction.eventName,
+          errorHandler(socket, io, "/commentator", instruction)
         );
       });
     });

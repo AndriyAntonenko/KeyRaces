@@ -1,5 +1,5 @@
 module.exports = {
-  PORT: process.env.PORT || 3001,
+  PORT: process.env.PORT || 3000,
   mongoose: {
     url: "mongodb://andrii:qwe123@ds347467.mlab.com:47467/binary-races",
     options: {
@@ -12,5 +12,9 @@ module.exports = {
   },
   tokens: {
     tokenSecret: "doqnf12o3g4o35noi319012fjbnjas"
+  },
+  raceData: {
+    raceTimeInSeconds: 90,
+    waitTimeInSeconds: 15
   }
 };

@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 /* eslint-disable no-plusplus */
+const config = require("config");
 const dayjs = require("dayjs");
 
 const Race = require("../../../models/race.model");
 
-const waitTimeInSeconds = 15;
+const waitTimeInSeconds = config.get("raceData.waitTimeInSeconds");
 let waitPlayers = [];
 let roomName;
 
@@ -71,17 +72,13 @@ exports.wait = function(io, socket) {
   }
 };
 
-exports.disconnect = function(io, socket) {
-  socket.on("disconnect", () => {
-    console.log("dwqdqwd");
-
-    for (let i = 0; i < waitPlayers.length; i++) {
-      if (waitPlayers[i].login === socket.user.login) {
-        socket.leave(roomName);
-        waitPlayers.splice(i, 1);
-        break;
-      }
+exports.disconnect = async function(io, socket) {
+  for (let i = 0; i < waitPlayers.length; i++) {
+    if (waitPlayers[i].login === socket.user.login) {
+      socket.leave(roomName);
+      waitPlayers.splice(i, 1);
+      break;
     }
-    console.log(`${socket.user.login} has been disconnected`);
-  });
+  }
+  console.log(`${socket.user.login} has been disconnected`);
 };
