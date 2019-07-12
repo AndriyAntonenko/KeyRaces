@@ -22,7 +22,11 @@ function jwtVerify(socket, next) {
     }
 
     const user = await User.findById(payload.id).select("_id login");
-  
+    
+    if (!user) {
+      return next(new Error("User not exist"));
+    }
+
     socket.user = {
       _id: user._id,
       login: user.login,

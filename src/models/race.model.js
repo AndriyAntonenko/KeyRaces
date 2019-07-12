@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const schema = new Schema(
   {
-    racers: { type: [mongoose.SchemaTypes.ObjectId], ref: "User" },
+    racers: { type: [mongoose.SchemaTypes.ObjectId], ref: "Users" },
     isActive: {
       type: Boolean
     }

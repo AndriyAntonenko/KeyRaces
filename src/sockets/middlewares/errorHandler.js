@@ -12,6 +12,9 @@ module.exports = (socket, io, nmsp, instruction) => {
 
       await instruction.controller.apply({ nmsp }, [io, socket, ...args]);
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+
       return callback({
         error,
         message: error.message
